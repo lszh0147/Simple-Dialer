@@ -224,7 +224,7 @@ class MainActivity : SimpleActivity() {
     private fun getInactiveTabIndexes(activeIndex: Int) = (0 until tabsList.size).filter { it != activeIndex }
 
     private fun initFragments() {
-        viewpager.offscreenPageLimit = 2
+        viewpager.offscreenPageLimit = 1
         viewpager.addOnPageChangeListener(object : ViewPager.OnPageChangeListener {
             override fun onPageScrollStateChanged(state: Int) {
                 searchMenuItem?.collapseActionView()
@@ -275,7 +275,7 @@ class MainActivity : SimpleActivity() {
     private fun getTabIcon(position: Int): Drawable {
         val drawableId = when (position) {
             0 -> R.drawable.ic_person_vector
-            1 -> R.drawable.ic_star_on_vector
+//            1 -> R.drawable.ic_star_on_vector
             else -> R.drawable.ic_clock_vector
         }
 
@@ -300,15 +300,15 @@ class MainActivity : SimpleActivity() {
 
     private fun refreshFragments() {
         contacts_fragment?.refreshItems()
-        favorites_fragment?.refreshItems()
+//        favorites_fragment?.refreshItems()
         recents_fragment?.refreshItems()
     }
 
-    private fun getAllFragments() = arrayListOf(contacts_fragment, favorites_fragment, recents_fragment).toMutableList() as ArrayList<MyViewPagerFragment?>
+    private fun getAllFragments() = arrayListOf(contacts_fragment, recents_fragment).toMutableList() as ArrayList<MyViewPagerFragment?>
 
     private fun getCurrentFragment(): MyViewPagerFragment? = when (viewpager.currentItem) {
         0 -> contacts_fragment
-        1 -> favorites_fragment
+//        1 -> favorites_fragment
         else -> recents_fragment
     }
 
