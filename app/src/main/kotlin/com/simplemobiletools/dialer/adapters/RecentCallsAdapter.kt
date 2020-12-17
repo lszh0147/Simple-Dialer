@@ -2,7 +2,9 @@ package com.simplemobiletools.dialer.adapters
 
 import android.content.Intent
 import android.graphics.drawable.Drawable
+import android.net.Uri
 import android.provider.CallLog.Calls
+import android.text.SpannableString
 import android.text.TextUtils
 import android.util.TypedValue
 import android.view.Menu
@@ -32,6 +34,7 @@ class RecentCallsAdapter(activity: SimpleActivity, var recentCalls: ArrayList<Re
     private var fontSize = activity.getTextSize()
     private val areMultipleSIMsAvailable = activity.areMultipleSIMsAvailable()
     private val redColor = resources.getColor(R.color.md_red_700)
+    private var textToHighlight = ""
 
     init {
         initDrawables()
@@ -44,6 +47,7 @@ class RecentCallsAdapter(activity: SimpleActivity, var recentCalls: ArrayList<Re
         menu.apply {
             findItem(R.id.cab_block_number).isVisible = isNougatPlus()
             findItem(R.id.cab_add_number).isVisible = isOneItemSelected()
+            findItem(R.id.cab_copy_number).isVisible = isOneItemSelected()
         }
     }
 
@@ -55,6 +59,8 @@ class RecentCallsAdapter(activity: SimpleActivity, var recentCalls: ArrayList<Re
         when (id) {
             R.id.cab_block_number -> askConfirmBlock()
             R.id.cab_add_number -> addNumberToContact()
+            R.id.cab_send_sms -> sendSMS()
+            R.id.cab_copy_number -> copyNumber()
             R.id.cab_remove -> askConfirmRemove()
         }
     }
@@ -142,6 +148,29 @@ class RecentCallsAdapter(activity: SimpleActivity, var recentCalls: ArrayList<Re
         }
     }
 
+    private fun sendSMS() {
+        val numbers = getSelectedItems().map { it.phoneNumber }
+        val numbersString = StringBuilder()
+        numbers.forEach {
+            numbersString.append("${Uri.encode(it)};")
+        }
+
+        val uriString = "smsto:${numbersString.toString().trimEnd(';')}"
+        Intent(Intent.ACTION_SENDTO, Uri.parse(uriString)).apply {
+            if (resolveActivity(activity.packageManager) != null) {
+                activity.startActivity(this)
+            } else {
+                activity.toast(R.string.no_app_found)
+            }
+        }
+    }
+
+    private fun copyNumber() {
+        val recentCall = getSelectedItems().firstOrNull() ?: return
+        activity.copyToClipboard(recentCall.phoneNumber)
+        finishActMode()
+    }
+
     private fun askConfirmRemove() {
         ConfirmationDialog(activity, activity.getString(R.string.remove_confirmation)) {
             activity.handlePermission(PERMISSION_WRITE_CALL_LOG) {
@@ -176,11 +205,15 @@ class RecentCallsAdapter(activity: SimpleActivity, var recentCalls: ArrayList<Re
         }
     }
 
-    fun updateItems(newItems: ArrayList<RecentCall>) {
+    fun updateItems(newItems: ArrayList<RecentCall>, highlightText: String = "") {
         if (newItems.hashCode() != recentCalls.hashCode()) {
             recentCalls = newItems.clone() as ArrayList<RecentCall>
+            textToHighlight = highlightText
             notifyDataSetChanged()
             finishActMode()
+        } else if (textToHighlight != highlightText) {
+            textToHighlight = highlightText
+            notifyDataSetChanged()
         }
     }
 
@@ -189,9 +222,13 @@ class RecentCallsAdapter(activity: SimpleActivity, var recentCalls: ArrayList<Re
     private fun setupView(view: View, call: RecentCall) {
         view.apply {
             item_recents_frame.isSelected = selectedKeys.contains(call.id)
-            var nameToShow = call.name
+            var nameToShow = SpannableString(call.name)
             if (call.neighbourIDs.isNotEmpty()) {
-                nameToShow += " (${call.neighbourIDs.size + 1})"
+                nameToShow = SpannableString("$nameToShow (${call.neighbourIDs.size + 1})")
+            }
+
+            if (textToHighlight.isNotEmpty() && nameToShow.contains(textToHighlight, true)) {
+                nameToShow = SpannableString(nameToShow.toString().highlightTextPart(textToHighlight, adjustedPrimaryColor))
             }
 
             item_recents_name.apply {

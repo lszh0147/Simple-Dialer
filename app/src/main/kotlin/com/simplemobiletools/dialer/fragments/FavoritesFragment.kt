@@ -24,7 +24,7 @@ class FavoritesFragment(context: Context, attributeSet: AttributeSet) : MyViewPa
 
     override fun setupFragment() {
         val placeholderResId = if (context.hasPermission(PERMISSION_READ_CONTACTS)) {
-            R.string.no_items_found
+            R.string.no_contacts_found
         } else {
             R.string.could_not_access_contacts
         }
@@ -110,5 +110,21 @@ class FavoritesFragment(context: Context, attributeSet: AttributeSet) : MyViewPa
                 FastScrollItemIndicator.Text("")
             }
         })
+    }
+
+    override fun onSearchClosed() {
+        fragment_placeholder.beVisibleIf(allContacts.isEmpty())
+        (fragment_list.adapter as? ContactsAdapter)?.updateItems(allContacts)
+        setupLetterFastscroller(allContacts)
+    }
+
+    override fun onSearchQueryChanged(text: String) {
+        val contacts = allContacts.filter {
+            it.name.contains(text, true) || it.doesContainPhoneNumber(text)
+        }.toMutableList() as ArrayList<SimpleContact>
+
+        fragment_placeholder.beVisibleIf(contacts.isEmpty())
+        (fragment_list.adapter as? ContactsAdapter)?.updateItems(contacts, text)
+        setupLetterFastscroller(contacts)
     }
 }

@@ -57,6 +57,7 @@ class CallActivity : SimpleActivity() {
         initButtons()
 
         audioManager.mode = AudioManager.MODE_IN_CALL
+
         CallManager.getCallContact(applicationContext) { contact ->
             callContact = contact
             callContactAvatar = getCallContactAvatar()
@@ -83,9 +84,7 @@ class CallActivity : SimpleActivity() {
             proximityWakeLock!!.release()
         }
 
-        if (CallManager.getState() == Call.STATE_DIALING) {
-            endCall()
-        }
+        endCall()
     }
 
     override fun onBackPressed() {

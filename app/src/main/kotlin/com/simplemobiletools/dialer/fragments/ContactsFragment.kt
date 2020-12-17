@@ -41,7 +41,11 @@ class ContactsFragment(context: Context, attributeSet: AttributeSet) : MyViewPag
             setTextColor(context.config.primaryColor)
             underlineText()
             setOnClickListener {
-                requestReadContactsPermission()
+                if (context.hasPermission(PERMISSION_READ_CONTACTS)) {
+                    launchCreateNewIntent()
+                } else {
+                    requestReadContactsPermission()
+                }
             }
         }
 
@@ -50,15 +54,7 @@ class ContactsFragment(context: Context, attributeSet: AttributeSet) : MyViewPag
         letter_fastscroller_thumb.textColor = context.config.primaryColor.getContrastColor()
 
         fragment_fab.setOnClickListener {
-            Intent(Intent.ACTION_INSERT).apply {
-                data = ContactsContract.Contacts.CONTENT_URI
-
-                if (resolveActivity(context.packageManager) != null) {
-                    activity?.startActivity(this)
-                } else {
-                    context.toast(R.string.no_app_found)
-                }
-            }
+            launchCreateNewIntent()
         }
     }
 
@@ -104,20 +100,19 @@ class ContactsFragment(context: Context, attributeSet: AttributeSet) : MyViewPag
             val currAdapter = fragment_list.adapter
             if (currAdapter == null) {
                 ContactsAdapter(activity as SimpleActivity, contacts, fragment_list, this) {
-                    val lookupKey = SimpleContactsHelper(activity!!).getContactLookupKey((it as SimpleContact).rawId.toString())
-                    val publicUri = Uri.withAppendedPath(ContactsContract.Contacts.CONTENT_LOOKUP_URI, lookupKey)
+                    val contact = it as SimpleContact
 
                     // handle private contacts differently, only Simple Contacts Pro can open them
                     val simpleContacts = "com.simplemobiletools.contacts.pro"
                     val simpleContactsDebug = "com.simplemobiletools.contacts.pro.debug"
-                    if (lookupKey.isEmpty() && it.rawId > 1000000 && it.contactId > 1000000 && it.rawId == it.contactId &&
+                    if (it.rawId > 1000000 && it.contactId > 1000000 && it.rawId == it.contactId &&
                         (context.isPackageInstalled(simpleContacts) || context.isPackageInstalled(simpleContactsDebug))) {
                         Intent().apply {
                             action = Intent.ACTION_VIEW
                             putExtra(CONTACT_ID, it.rawId)
                             putExtra(IS_PRIVATE, true)
                             `package` = if (context.isPackageInstalled(simpleContacts)) simpleContacts else simpleContactsDebug
-                            setDataAndType(publicUri, "vnd.android.cursor.dir/person")
+                            setDataAndType(ContactsContract.Contacts.CONTENT_LOOKUP_URI, "vnd.android.cursor.dir/person")
                             if (resolveActivity(context.packageManager) != null) {
                                 activity?.startActivity(this)
                             } else {
@@ -125,7 +120,13 @@ class ContactsFragment(context: Context, attributeSet: AttributeSet) : MyViewPag
                             }
                         }
                     } else {
-                        activity!!.launchViewContactIntent(publicUri)
+                        ensureBackgroundThread {
+                            val lookupKey = SimpleContactsHelper(activity!!).getContactLookupKey((contact).rawId.toString())
+                            val publicUri = Uri.withAppendedPath(ContactsContract.Contacts.CONTENT_LOOKUP_URI, lookupKey)
+                            activity?.runOnUiThread {
+                                activity!!.launchViewContactIntent(publicUri)
+                            }
+                        }
                     }
                 }.apply {
                     fragment_list.adapter = this
@@ -148,16 +149,18 @@ class ContactsFragment(context: Context, attributeSet: AttributeSet) : MyViewPag
         })
     }
 
-    fun onSearchClosed() {
+    override fun onSearchClosed() {
+        fragment_placeholder.beVisibleIf(allContacts.isEmpty())
         (fragment_list.adapter as? ContactsAdapter)?.updateItems(allContacts)
         setupLetterFastscroller(allContacts)
     }
 
-    fun onSearchQueryChanged(text: String) {
+    override fun onSearchQueryChanged(text: String) {
         val contacts = allContacts.filter {
             it.name.contains(text, true) || it.doesContainPhoneNumber(text)
         }.toMutableList() as ArrayList<SimpleContact>
 
+        fragment_placeholder.beVisibleIf(contacts.isEmpty())
         (fragment_list.adapter as? ContactsAdapter)?.updateItems(contacts, text)
         setupLetterFastscroller(contacts)
     }
@@ -167,12 +170,27 @@ class ContactsFragment(context: Context, attributeSet: AttributeSet) : MyViewPag
             if (it) {
                 fragment_placeholder.text = context.getString(R.string.no_contacts_found)
                 fragment_placeholder_2.text = context.getString(R.string.create_new)
+                fragment_placeholder_2.setOnClickListener {
+                    launchCreateNewIntent()
+                }
 
                 SimpleContactsHelper(context).getAvailableContacts(false) { contacts ->
                     activity?.runOnUiThread {
                         gotContacts(contacts)
                     }
                 }
+            }
+        }
+    }
+
+    private fun launchCreateNewIntent() {
+        Intent().apply {
+            action = Intent.ACTION_INSERT
+            data = ContactsContract.Contacts.CONTENT_URI
+            if (resolveActivity(context.packageManager) != null) {
+                context.startActivity(this)
+            } else {
+                context.toast(R.string.no_app_found)
             }
         }
     }

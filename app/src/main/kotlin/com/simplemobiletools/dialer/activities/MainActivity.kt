@@ -35,7 +35,6 @@ import java.util.*
 class MainActivity : SimpleActivity() {
     private var storedTextColor = 0
     private var storedPrimaryColor = 0
-    private var isFirstResume = true
     private var isSearchOpen = false
     private var searchMenuItem: MenuItem? = null
 
@@ -83,12 +82,11 @@ class MainActivity : SimpleActivity() {
             }
         }
 
-        if (!isFirstResume && !isSearchOpen) {
+        if (!isSearchOpen) {
             refreshItems()
         }
 
         checkShortcuts()
-        isFirstResume = false
     }
 
     override fun onPause() {
@@ -103,8 +101,6 @@ class MainActivity : SimpleActivity() {
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.menu, menu)
-        menu.findItem(R.id.search).isVisible = viewpager.currentItem == 0
-
         setupSearch(menu)
         updateMenuItemColors(menu)
         return true
@@ -141,13 +137,7 @@ class MainActivity : SimpleActivity() {
 
     private fun checkContactPermissions() {
         handlePermission(PERMISSION_READ_CONTACTS) {
-            if (it) {
-                handlePermission(PERMISSION_GET_ACCOUNTS) {
-                    initFragments()
-                }
-            } else {
-                initFragments()
-            }
+            initFragments()
         }
     }
 
@@ -163,7 +153,7 @@ class MainActivity : SimpleActivity() {
 
                 override fun onQueryTextChange(newText: String): Boolean {
                     if (isSearchOpen) {
-                        contacts_fragment?.onSearchQueryChanged(newText)
+                        getCurrentFragment()?.onSearchQueryChanged(newText)
                     }
                     return true
                 }
@@ -178,7 +168,7 @@ class MainActivity : SimpleActivity() {
             }
 
             override fun onMenuItemActionCollapse(item: MenuItem?): Boolean {
-                contacts_fragment?.onSearchClosed()
+                getCurrentFragment()?.onSearchClosed()
                 isSearchOpen = false
                 main_dialpad_button.beVisible()
                 return true
@@ -234,6 +224,7 @@ class MainActivity : SimpleActivity() {
     private fun getInactiveTabIndexes(activeIndex: Int) = (0 until tabsList.size).filter { it != activeIndex }
 
     private fun initFragments() {
+        viewpager.offscreenPageLimit = 2
         viewpager.addOnPageChangeListener(object : ViewPager.OnPageChangeListener {
             override fun onPageScrollStateChanged(state: Int) {
                 searchMenuItem?.collapseActionView()
@@ -297,17 +288,29 @@ class MainActivity : SimpleActivity() {
         }
 
         if (viewpager.adapter == null) {
-            viewpager.offscreenPageLimit = tabsList.size - 1
             viewpager.adapter = ViewPagerAdapter(this)
             viewpager.currentItem = getDefaultTab()
+            viewpager.onGlobalLayout {
+                refreshFragments()
+            }
+        } else {
+            refreshFragments()
         }
+    }
 
+    private fun refreshFragments() {
         contacts_fragment?.refreshItems()
         favorites_fragment?.refreshItems()
         recents_fragment?.refreshItems()
     }
 
     private fun getAllFragments() = arrayListOf(contacts_fragment, favorites_fragment, recents_fragment).toMutableList() as ArrayList<MyViewPagerFragment?>
+
+    private fun getCurrentFragment(): MyViewPagerFragment? = when (viewpager.currentItem) {
+        0 -> contacts_fragment
+        1 -> favorites_fragment
+        else -> recents_fragment
+    }
 
     private fun getDefaultTab(): Int {
         return when (config.defaultTab) {
@@ -324,7 +327,8 @@ class MainActivity : SimpleActivity() {
         val faqItems = arrayListOf(
             FAQItem(R.string.faq_2_title_commons, R.string.faq_2_text_commons),
             FAQItem(R.string.faq_6_title_commons, R.string.faq_6_text_commons),
-            FAQItem(R.string.faq_7_title_commons, R.string.faq_7_text_commons)
+            FAQItem(R.string.faq_7_title_commons, R.string.faq_7_text_commons),
+            FAQItem(R.string.faq_9_title_commons, R.string.faq_9_text_commons)
         )
 
         startAboutActivity(R.string.app_name, licenses, BuildConfig.VERSION_NAME, faqItems, true)

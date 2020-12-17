@@ -1,6 +1,37 @@
 Changelog
 ==========
 
+Version 5.5.4 *(2020-12-07)*
+----------------------------
+
+ * Properly show private contacts on Android 11+
+ * Some translation and stability improvements
+
+Version 5.5.3 *(2020-11-04)*
+----------------------------
+
+ * Allow easily copying phone number from the Recents tab
+ * Adding Search at Favorites and Recents tabs
+ * Fixed a glitch with contacts sometimes not loading in properly
+ * Added some stability, translation and UI improvements
+
+Version 5.5.2 *(2020-10-27)*
+----------------------------
+
+ * Adding some UX and translation improvements
+
+Version 5.5.1 *(2020-09-18)*
+----------------------------
+
+ * Properly recognize contact name from number in some new cases
+ * Do not always require the Contacts permission
+
+Version 5.5.0 *(2020-08-07)*
+----------------------------
+
+ * Allow sending SMS to contacts directly from the call log
+ * End the call if the call screen gets shut down
+
 Version 5.4.1 *(2020-07-12)*
 ----------------------------
 
