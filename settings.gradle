@@ -1,2 +1,3 @@
 rootProject.name='Simple-Dialer'
-include ':app'
+include ':app', ':commons'
+project (':commons').projectDir = new File('../Simple-Commons/commons')
