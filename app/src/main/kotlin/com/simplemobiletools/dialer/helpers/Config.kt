@@ -37,6 +37,6 @@ class Config(context: Context) : BaseConfig(context) {
     fun getCustomSIM(number: String) = prefs.getString(REMEMBER_SIM_PREFIX + number, "")
 
     var groupSubsequentCalls: Boolean
-        get() = prefs.getBoolean(GROUP_SUBSEQUENT_CALLS, true)
+        get() = prefs.getBoolean(GROUP_SUBSEQUENT_CALLS, false)
         set(groupSubsequentCalls) = prefs.edit().putBoolean(GROUP_SUBSEQUENT_CALLS, groupSubsequentCalls).apply()
 }
